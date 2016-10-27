@@ -80,6 +80,8 @@ void CAHitQuadrupletGenerator::hitQuadruplets(const TrackingRegion& region,
 
 
 	HitPairGeneratorFromLayerPair thePairGenerator(0, 1, &theLayerCache);
+
+
 	for (unsigned int i = 0; i < layers.size(); i++)
 	{
 		for (unsigned int j = 0; j < 4; ++j)
