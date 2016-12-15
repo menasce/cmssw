@@ -311,13 +311,12 @@ void GPUCellularAutomaton<maxNumberOfQuadruplets>::run(
 //	cudaFuncSetCacheConfig(kernel_create, cudaFuncCachePreferL1);
 //	cudaFuncSetCacheConfig(kernel_connect, cudaFuncCachePreferL1);
 //	cudaFuncSetCacheConfig(kernel_find_ntuplets_unrolled_recursion, cudaFuncCachePreferL1);
-	cudaMemcpyAsync(theCells, host_Cells,(theNumberOfLayerPairs) * sizeof(GPUCACell *),			cudaMemcpyHostToDevice, 0);
+	cudaMemcpyAsync(theCells, host_Cells,(theNumberOfLayerPairs) * sizeof(GPUCACell *),cudaMemcpyHostToDevice, 0);
 
 	dim3 numberOfBlocks_create(16, theNumberOfLayerPairs);
 	dim3 numberOfBlocks_connect(32, theNumberOfLayerPairs);
 	dim3 numberOfBlocks_find(8, theExternalLayerPairs.size());
   	cudaStreamSynchronize(0);
-for(int iteration = 0; iteration < 1000; ++iteration){
 
    
 	cudaMemset(foundNtuplets, 0, sizeof(int));
@@ -327,12 +326,12 @@ for(int iteration = 0; iteration < 1000; ++iteration){
 
 	kernel_connect<<<numberOfBlocks_connect,256>>>(gpu_doublets, theCells, isOuterHitOfCell, thePtMin, theRegionOriginX, theRegionOriginY, theRegionOriginRadius, theThetaCut, thePhiCut, theHardPtCut, theNumberOfLayerPairs);
 
-//	kernel_find_ntuplets<<<numberOfBlocks,128>>>(gpu_doublets, theCells, foundNtuplets,gpu_externalLayerPairs, theExternalLayerPairs.size(), 4 );
+	kernel_find_ntuplets<<<numberOfBlocks,128>>>(gpu_doublets, theCells, foundNtuplets,gpu_externalLayerPairs, theExternalLayerPairs.size(), 4 );
 
 //	kernel_find_ntuplets_dyn_parallelism<<<numberOfBlocks,128>>>(gpu_doublets, theCells, foundNtuplets,gpu_externalLayerPairs, theExternalLayerPairs.size(), 4 );
-	kernel_find_ntuplets_unrolled_recursion<<<numberOfBlocks_find,256>>>(gpu_doublets, theCells, foundNtuplets,gpu_externalLayerPairs, theExternalLayerPairs.size(), 4 );
+// 	kernel_find_ntuplets_unrolled_recursion<<<numberOfBlocks_find,256>>>(gpu_doublets, theCells, foundNtuplets,gpu_externalLayerPairs, theExternalLayerPairs.size(), 4 );
 	
-	}
+	
 cudaMemcpyAsync(host_foundNtuplets, foundNtuplets,
 			sizeof(GPUSimpleVector<maxNumberOfQuadruplets, Quadruplet> ),
 			cudaMemcpyDeviceToHost, 0);
