@@ -326,7 +326,7 @@ void GPUCellularAutomaton<maxNumberOfQuadruplets>::run(
 
 	kernel_connect<<<numberOfBlocks_connect,256>>>(gpu_doublets, theCells, isOuterHitOfCell, thePtMin, theRegionOriginX, theRegionOriginY, theRegionOriginRadius, theThetaCut, thePhiCut, theHardPtCut, theNumberOfLayerPairs);
 
-	kernel_find_ntuplets<<<numberOfBlocks,128>>>(gpu_doublets, theCells, foundNtuplets,gpu_externalLayerPairs, theExternalLayerPairs.size(), 4 );
+	kernel_find_ntuplets<<<numberOfBlocks_find,128>>>(gpu_doublets, theCells, foundNtuplets,gpu_externalLayerPairs, theExternalLayerPairs.size(), 4 );
 
 //	kernel_find_ntuplets_dyn_parallelism<<<numberOfBlocks,128>>>(gpu_doublets, theCells, foundNtuplets,gpu_externalLayerPairs, theExternalLayerPairs.size(), 4 );
 // 	kernel_find_ntuplets_unrolled_recursion<<<numberOfBlocks_find,256>>>(gpu_doublets, theCells, foundNtuplets,gpu_externalLayerPairs, theExternalLayerPairs.size(), 4 );
