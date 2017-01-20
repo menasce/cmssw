@@ -5,22 +5,28 @@
 #include "RecoPixelVertexing/PixelTriplets/interface/GPUCellularAutomaton.h"
 #include "RecoPixelVertexing/PixelTriplets/interface/GPUCACell.h"
 #include "RecoPixelVertexing/PixelTriplets/interface/GPUHitsAndDoublets.h"
+//===================================================================================
+#include <iostream>
+using namespace std;
+//===================================================================================
 
 __global__
-void kernel_create(const GPULayerDoublets* gpuDoublets,
-		const GPULayerHits* gpuHitsOnLayers, GPUCACell** cells,
-		GPUSimpleVector<100, GPUCACell*> ** isOuterHitOfCell,
-		int numberOfLayerPairs)
+void kernel_create(const GPULayerDoublets            * gpuDoublets,
+		   const GPULayerHits                * gpuHitsOnLayers, 
+		   GPUCACell                        ** cells,
+		   GPUSimpleVector<100, GPUCACell*> ** isOuterHitOfCell,
+		   int numberOfLayerPairs)
 {
 
-	unsigned int layerPairIndex = blockIdx.y;
+	unsigned int layerPairIndex       = blockIdx.y;
 	unsigned int cellIndexInLayerPair = threadIdx.x + blockIdx.x * blockDim.x;
 	if (layerPairIndex < numberOfLayerPairs)
 	{
 		int outerLayerId = gpuDoublets[layerPairIndex].outerLayerId;
 
-		for (int i = cellIndexInLayerPair; i < gpuDoublets[layerPairIndex].size;
-				i += gridDim.x * blockDim.x)
+		for (int i =  cellIndexInLayerPair; 
+		         i <  gpuDoublets[layerPairIndex].size;
+			 i += gridDim.x * blockDim.x)
 		{
 			auto& thisCell = cells[layerPairIndex][i];
 
@@ -77,11 +83,12 @@ void kernel_connect(const GPULayerDoublets* gpuDoublets, GPUCACell** cells,
 
 template<int maxNumberOfQuadruplets>
 __global__
-void kernel_find_ntuplets(const GPULayerDoublets* gpuDoublets,
-		GPUCACell** cells,
-		GPUSimpleVector<maxNumberOfQuadruplets, Quadruplet>* foundNtuplets,
-		int* externalLayerPairs, int numberOfExternalLayerPairs,
-		unsigned int minHitsPerNtuplet)
+void kernel_find_ntuplets(const GPULayerDoublets                               * gpuDoublets,
+		          GPUCACell                                           ** cells,
+		          GPUSimpleVector<maxNumberOfQuadruplets, Quadruplet>  * foundNtuplets,
+		          int                                                  * externalLayerPairs,
+			  int                                                    numberOfExternalLayerPairs,
+		          unsigned int                                           minHitsPerNtuplet)
 {
 
 	unsigned int cellIndexInLastLayerPair = threadIdx.x + blockIdx.x * blockDim.x;
@@ -95,9 +102,47 @@ void kernel_find_ntuplets(const GPULayerDoublets* gpuDoublets,
 		stack.reset();
 		stack.push_back(&cells[lastLayerPairIndex][i]);
 		cells[lastLayerPairIndex][i].find_ntuplets(foundNtuplets, stack, minHitsPerNtuplet);
+//===================================================================================
+//   for(int k=0; k<foundNtuplets->size(); ++k)
+//   {
+//    Quadruplet tmpQ = foundNtuplets->m_data[k] ;
+//    printf(
+//    	  "%d] k: %d\n\t\t\t\t\t%d\t%d\t%d\t%d\t%d\t%d\n", 
+//    	  __LINE__ , k,
+//    	  tmpQ.layerPairsAndCellId[0].x,
+//    	  tmpQ.layerPairsAndCellId[0].y,
+//    	  tmpQ.layerPairsAndCellId[1].x,
+//    	  tmpQ.layerPairsAndCellId[1].y,
+//    	  tmpQ.layerPairsAndCellId[2].x,
+//    	  tmpQ.layerPairsAndCellId[2].y
+//    	 ) ;
+//   }
+//===================================================================================
 
 	}
 }
+//===============================================================================
+// New dario V
+template<int maxNumberOfQuadruplets>
+__global__
+void kernel_fit_ntuplets(GPUSimpleVector<maxNumberOfQuadruplets, Quadruplet>* foundNtuplets)
+{
+   int indx = threadIdx.x ;
+   if( indx > foundNtuplets->size() ) return ;
+   Quadruplet tmpQ = foundNtuplets->m_data[indx] ;
+   printf(
+   	  "%d] indx: %d\n\t%d\t%d\t%d\t%d\t%d\t%d\n", 
+   	  __LINE__ , indx,
+   	  tmpQ.layerPairsAndCellId[0].x,
+   	  tmpQ.layerPairsAndCellId[0].y,
+   	  tmpQ.layerPairsAndCellId[1].x,
+   	  tmpQ.layerPairsAndCellId[1].y,
+   	  tmpQ.layerPairsAndCellId[2].x,
+   	  tmpQ.layerPairsAndCellId[2].y
+   	 ) ;
+}
+// New dario ^
+//===============================================================================
 
 
 
@@ -313,20 +358,43 @@ void GPUCellularAutomaton<maxNumberOfQuadruplets>::run(
 //	cudaFuncSetCacheConfig(kernel_find_ntuplets_unrolled_recursion, cudaFuncCachePreferL1);
 	cudaMemcpyAsync(theCells, host_Cells,(theNumberOfLayerPairs) * sizeof(GPUCACell *),cudaMemcpyHostToDevice, 0);
 
-	dim3 numberOfBlocks_create(16, theNumberOfLayerPairs);
-	dim3 numberOfBlocks_connect(32, theNumberOfLayerPairs);
-	dim3 numberOfBlocks_find(8, theExternalLayerPairs.size());
+	dim3 numberOfBlocks_create (16, theNumberOfLayerPairs       );
+	dim3 numberOfBlocks_connect(32, theNumberOfLayerPairs       );
+	dim3 numberOfBlocks_find   ( 8, theExternalLayerPairs.size());
   	cudaStreamSynchronize(0);
-
    
 	cudaMemset(foundNtuplets, 0, sizeof(int));
 
+	kernel_create 	    <<<numberOfBlocks_create, 256>>>(
+	              	    				     gpu_doublets, 
+			    				     gpu_layerHits, 
+			    				     theCells, 
+			    				     isOuterHitOfCell, 
+			    				     theNumberOfLayerPairs
+			    				    );
 
-	kernel_create<<<numberOfBlocks_create,256>>>(gpu_doublets, gpu_layerHits, theCells, isOuterHitOfCell, theNumberOfLayerPairs);
+	kernel_connect	    <<<numberOfBlocks_connect,256>>>(
+	              	    				     gpu_doublets, 
+			    				     theCells, 
+			    				     isOuterHitOfCell, 
+			    				     thePtMin, 
+			    				     theRegionOriginX, 
+			    				     theRegionOriginY, 
+			    				     theRegionOriginRadius, 
+			    				     theThetaCut, 
+			    				     thePhiCut, 
+			    				     theHardPtCut, 
+			    				     theNumberOfLayerPairs
+			    				    );
 
-	kernel_connect<<<numberOfBlocks_connect,256>>>(gpu_doublets, theCells, isOuterHitOfCell, thePtMin, theRegionOriginX, theRegionOriginY, theRegionOriginRadius, theThetaCut, thePhiCut, theHardPtCut, theNumberOfLayerPairs);
-
-	kernel_find_ntuplets<<<numberOfBlocks_find,128>>>(gpu_doublets, theCells, foundNtuplets,gpu_externalLayerPairs, theExternalLayerPairs.size(), 4 );
+	kernel_find_ntuplets<<<numberOfBlocks_find,   128>>>(
+	                                                     gpu_doublets, 
+							     theCells, 
+							     foundNtuplets,
+							     gpu_externalLayerPairs, 
+							     theExternalLayerPairs.size(), 
+							     4 
+							    );
 
 //	kernel_find_ntuplets_dyn_parallelism<<<numberOfBlocks,128>>>(gpu_doublets, theCells, foundNtuplets,gpu_externalLayerPairs, theExternalLayerPairs.size(), 4 );
 // 	kernel_find_ntuplets_unrolled_recursion<<<numberOfBlocks_find,256>>>(gpu_doublets, theCells, foundNtuplets,gpu_externalLayerPairs, theExternalLayerPairs.size(), 4 );
@@ -337,6 +405,26 @@ cudaMemcpyAsync(host_foundNtuplets, foundNtuplets,
 			cudaMemcpyDeviceToHost, 0);
 	cudaStreamSynchronize(0);
 	quadruplets.resize(host_foundNtuplets->size());
+//===================================================================================
+cout << __LINE__ << "\t] [" << __PRETTY_FUNCTION__ << "]      foundNtuplets->size(): "
+     << host_foundNtuplets->size()<< " ===========================>" << endl ;
+// for(int j=0; j<host_foundNtuplets->size();++j)
+// {
+//  Quadruplet tmpQuadruplet = host_foundNtuplets->m_data[j];
+//  printf("%d\t] [s] %d - %d %d %d %d %d %d\n", __LINE__, j, 
+//                                               tmpQuadruplet.layerPairsAndCellId[0].x, 
+// 					      tmpQuadruplet.layerPairsAndCellId[0].y, 
+//                                               tmpQuadruplet.layerPairsAndCellId[1].x, 
+// 					      tmpQuadruplet.layerPairsAndCellId[1].y,
+// 					      tmpQuadruplet.layerPairsAndCellId[2].x, 
+// 					      tmpQuadruplet.layerPairsAndCellId[2].y) ;
+// }
+// cout << __LINE__ << "\t] [" << __PRETTY_FUNCTION__ << "] ===========================<" << endl ;
+	dim3 numberOfBlocks_fit    ( 8, host_foundNtuplets->size());                       // New dario
+	kernel_fit_ntuplets<<<numberOfBlocks_fit,     512>>>(                              // New dario
+							     foundNtuplets		   // New dario
+							    );
+//===================================================================================
 
 	memcpy(quadruplets.data(), host_foundNtuplets->m_data,
 			host_foundNtuplets->size() * sizeof(Quadruplet));

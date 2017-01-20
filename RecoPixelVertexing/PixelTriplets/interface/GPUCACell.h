@@ -255,7 +255,18 @@ public:
 
 				}
 				foundNtuplets->push_back_ts(tmpQuadruplet);
-
+//===================================================================================
+  printf(
+  	 "%d] foundNtuplets->size(): %d\n\t\t\t\t\t%d\t%d\t%d\t%d\t%d\t%d\n", 
+  	 __LINE__ , foundNtuplets->size(),
+  	 tmpQuadruplet.layerPairsAndCellId[0].x,
+  	 tmpQuadruplet.layerPairsAndCellId[0].y,
+  	 tmpQuadruplet.layerPairsAndCellId[1].x,
+  	 tmpQuadruplet.layerPairsAndCellId[1].y,
+  	 tmpQuadruplet.layerPairsAndCellId[2].x,
+  	 tmpQuadruplet.layerPairsAndCellId[2].y
+        ) ;
+//===================================================================================
 			}
 			else
 			return;

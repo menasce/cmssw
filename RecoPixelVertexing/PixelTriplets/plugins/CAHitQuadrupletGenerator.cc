@@ -162,7 +162,15 @@ void CAHitQuadrupletGenerator::hitQuadruplets(const TrackingRegion& region,
 	const int numberOfHitsInNtuplet = 4;
 	std::vector<std::array<std::array<int, 2 > , 3> > foundQuadruplets;
 
-	GPUCellularAutomaton <1500> ca(region, CAThetaCut, CAPhiCut, CAHardPtCut, g.theLayers.size(), g.theLayerPairs.size(), externalLayerPairs  );
+	GPUCellularAutomaton <1500> ca(
+	                               region, 
+				       CAThetaCut, 
+				       CAPhiCut, 
+				       CAHardPtCut, 
+				       g.theLayers.size(), 
+				       g.theLayerPairs.size(), 
+				       externalLayerPairs  
+				      );
 	ca.run(hitDoublets, hitsOnLayer, g, foundQuadruplets);
 
 
@@ -194,7 +202,8 @@ void CAHitQuadrupletGenerator::hitQuadruplets(const TrackingRegion& region,
 
 			int currentDoubletIdInLayerPair = foundQuadruplets[quadId][i][1];
 
-			tmpQuadruplet[i] = hitDoublets[currentLayerPairId].hit(currentDoubletIdInLayerPair, HitDoublets::inner);
+			tmpQuadruplet[i] = hitDoublets[currentLayerPairId].hit(currentDoubletIdInLayerPair, 
+			                   HitDoublets::inner);
 
 			gps[i] = tmpQuadruplet[i]->globalPosition();
 			ges[i] = tmpQuadruplet[i]->globalPositionError();
@@ -205,7 +214,8 @@ void CAHitQuadrupletGenerator::hitQuadruplets(const TrackingRegion& region,
 		int currentLayerPairId = foundQuadruplets[quadId][2][0];
 		auto & currentLayerPairRef = g.theLayerPairs[currentLayerPairId];
 		int currentDoubletIdInLayerPair = foundQuadruplets[quadId][2][1];
-		tmpQuadruplet[3] = hitDoublets[currentLayerPairId].hit(currentDoubletIdInLayerPair, HitDoublets::outer);
+		tmpQuadruplet[3] = hitDoublets[currentLayerPairId].hit(currentDoubletIdInLayerPair, 
+		                                                       HitDoublets::outer);
 
 		gps[3] = tmpQuadruplet[3]->globalPosition();
 
